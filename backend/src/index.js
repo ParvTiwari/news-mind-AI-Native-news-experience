@@ -5,7 +5,7 @@ const cors = require('cors');
 const newsRoutes = require('./routes/newsRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -15,6 +15,10 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api', newsRoutes);
+
+app.get('/', (req, res) => {
+  res.send('NewsMind Backend Running 🚀');
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

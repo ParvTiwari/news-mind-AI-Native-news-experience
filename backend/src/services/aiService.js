@@ -1,4 +1,21 @@
-const hasOpenAIKey = Boolean(process.env.OPENAI_API_KEY);
+const hasGroqKey = Boolean(process.env.GROQ_API_KEY);
+
+const providerConfig = {
+  groq: {
+    enabled: hasGroqKey,
+    url: 'https://api.groq.com/openai/v1/chat/completions',
+    model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+    apiKey: process.env.GROQ_API_KEY
+  }
+};
+
+function hasAnyLLMKey() {
+  return providerConfig.groq.enabled;
+}
+
+function resolveProvider() {
+  return providerConfig.groq.enabled ? providerConfig.groq : null;
+}
 
 const personaPrompts = {
   investor: 'Focus on market movements, portfolio impact, and near-term risks/opportunities.',
@@ -29,56 +46,71 @@ function buildFallbackExplanation(article, persona) {
   return `${lead}. Watch second-order effects on competition, capital flow, and customer demand.`;
 }
 
-async function runOpenAIJson(prompt) {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-    },
-    body: JSON.stringify({
-      model: 'gpt-4.1-mini',
-      temperature: 0.2,
-      response_format: { type: 'json_object' },
-      messages: [{ role: 'user', content: prompt }]
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI request failed (${response.status})`);
+function extractJSONObject(text = '') {
+  const trimmed = text.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch (_) {
+    const start = trimmed.indexOf('{');
+    const end = trimmed.lastIndexOf('}');
+    if (start !== -1 && end !== -1 && end > start) {
+      return JSON.parse(trimmed.slice(start, end + 1));
+    }
+    throw new Error('Model response did not contain valid JSON');
   }
-
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content || '{}';
-  return JSON.parse(content);
 }
 
-async function runOpenAIText(prompt) {
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+async function postChatCompletion(messages, temperature = 0.2) {
+  const provider = resolveProvider();
+  if (!provider) {
+    throw new Error('No Groq API key configured');
+  }
+
+  const response = await fetch(provider.url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+      Authorization: `Bearer ${provider.apiKey}`
     },
     body: JSON.stringify({
-      model: 'gpt-4.1-mini',
-      temperature: 0.3,
-      messages: [{ role: 'user', content: prompt }]
+      model: provider.model,
+      temperature,
+      messages
     })
   });
 
   if (!response.ok) {
-    throw new Error(`OpenAI request failed (${response.status})`);
+    throw new Error(`LLM request failed (${response.status})`);
   }
 
   const data = await response.json();
   return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
+async function runLLMJson(prompt) {
+  const content = await postChatCompletion(
+    [
+      {
+        role: 'system',
+        content:
+          'Return valid JSON only. Do not wrap JSON in markdown code fences. Do not add any explanation text.'
+      },
+      { role: 'user', content: prompt }
+    ],
+    0.2
+  );
+
+  return extractJSONObject(content || '{}');
+}
+
+async function runLLMText(prompt) {
+  return postChatCompletion([{ role: 'user', content: prompt }], 0.3);
+}
+
 async function enrichArticlesForPersona(articles, persona, interests = []) {
   const resolvedPersona = safePersona(persona);
 
-  if (!hasOpenAIKey) {
+  if (!hasAnyLLMKey()) {
     return articles.map((article) => ({
       ...article,
       summary: article.description || 'No summary available yet.',
@@ -112,7 +144,7 @@ Interests: ${interests.join(', ') || 'none specified'}
 Articles: ${JSON.stringify(articles.map(({ id, title, description, source, publishedAt }) => ({ id, title, description, source, publishedAt })))}
 `;
 
-  const parsed = await runOpenAIJson(prompt);
+  const parsed = await runLLMJson(prompt);
   const byId = new Map((parsed.cards || []).map((card) => [card.id, card]));
 
   return articles.map((article) => {
@@ -132,7 +164,7 @@ Articles: ${JSON.stringify(articles.map(({ id, title, description, source, publi
 async function answerNewsQuestion(question, contextArticles = [], persona = 'student') {
   const resolvedPersona = safePersona(persona);
 
-  if (!hasOpenAIKey) {
+  if (!hasAnyLLMKey()) {
     const headlines = contextArticles.slice(0, 3).map((a) => `• ${a.title}`).join('\n');
     return `Quick take for a ${resolvedPersona}:\n${headlines || 'No fresh context available right now.'}\n\nAsk a narrower question (company, sector, or timeline) for a sharper answer.`;
   }
@@ -149,7 +181,7 @@ ${contextArticles
 
 Answer in 4-6 concise bullet points with concrete implications.`;
 
-  return runOpenAIText(prompt);
+  return runLLMText(prompt);
 }
 
 module.exports = { enrichArticlesForPersona, answerNewsQuestion };
