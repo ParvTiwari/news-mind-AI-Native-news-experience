@@ -1,5 +1,7 @@
 const BASE_URL = "http://localhost:5000";
 
+import { savePreferences, filterNews } from "./personalization.js";
+
 const landingPage = document.getElementById("landing-page");
 const dashboard = document.getElementById("dashboard");
 const startBtn = document.getElementById("start-btn");
@@ -18,7 +20,7 @@ let selectedInterests = [];
 
 interestButtons.forEach(btn => {
   btn.addEventListener("click", () => {
-    const value = btn.innerText;
+    const value = btn.getAttribute("data-value"); // 🔥 CHANGED
 
     if (selectedInterests.includes(value)) {
       selectedInterests = selectedInterests.filter(i => i !== value);
@@ -32,11 +34,14 @@ interestButtons.forEach(btn => {
 
 /* ---------------- START APP ---------------- */
 
-startBtn.addEventListener("click", () => {
+startBtn.addEventListener("click", async () => {
   if (selectedInterests.length === 0) {
     alert("Select at least one interest");
     return;
   }
+
+  // 🔥 SAVE TO FIREBASE
+  await savePreferences("user1", selectedInterests);
 
   landingPage.classList.add("hidden");
   dashboard.classList.remove("hidden");
@@ -60,7 +65,11 @@ async function fetchNews() {
       return;
     }
 
-    renderNews(data.articles);
+    // 🔥 APPLY PERSONALIZATION FILTER
+    const filteredNews = filterNews(data.articles, selectedInterests);
+
+    renderNews(filteredNews.length ? filteredNews : data.articles);
+
   } catch (error) {
     console.error(error);
     newsContainer.innerHTML = "<p>Error loading news</p>";
@@ -136,12 +145,3 @@ function addMessage(role, text) {
 
   chatBox.scrollTop = chatBox.scrollHeight;
 }
-/* Firebase wala hai */
-import { savePreferences, filterNews } from "./personalization.js";
-
-// Example interests
-const interests = ["technology", "finance"];
-
-// Example usage
-savePreferences("user1", interests);
-/* Firebase wala kahatam*/ 
