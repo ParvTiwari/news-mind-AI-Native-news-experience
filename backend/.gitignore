@@ -50,3 +50,16 @@ frontend/build/
 backend/node_modules/
 backend/dist/
 backend/logs/
+{
+  "type": "service_account",
+  "project_id": "newsmind-ai-fb56a",
+  "private_key_id": "a053dd9ed91ec61e298eeb336a90f4115eb285c7",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCWLjl1112ckOxL\nvI/DPWNs9VLO2YKlG5zzoXNuqFTqqKoXDdSXN3NVoadTFfcklLz6MiPU7oBrMHi5\nnXSJx2C63AgpaJ93pFAYc5AjRzfIeQzko55vM1PFyju7wCHKaZGp26j7FL5eQqpE\ns4atBGWmkJ5V6nKK7U/X0t7Bn2t/SP+ki+S6D/4AGMKqKzL6K7kjjFkJt/U3je7f\nkl/8kpb3EZgAKmXdgVZHlBpo++HppoVPiXRICz1Z7nuJdyYUStOTmNJvYucAQ4TA\ni5Ttcoi58i/ehppxABiDEnLptNrNNHSFruw3WVTt84pyGRy+sTm5QLu+7MB00xUp\n8V0nhbIdAgMBAAECggEAF8AFKcfun7dCi0KteJqheeZ9G0XGNa69fkD65JXd4gNc\n7Mrs4yIrjPAE6myXmlMkZKvfw0mZiPoQKYiHWM+tUjfAWa4YQ/86BHfoJFAbuAo+\nufzPLjZPigDOvAUpQt25ocNhgJ2Z8oW38Cf1BTEkEzidNaifRy26+f546GV6BlWq\nxX6gaCAHX0DJcxoTTA30drD99YWXXp9yTqHxkkhYTpOIxPGGAbIuHG+u5n24vb+w\nr4XbczlpWRZ6kAmC4yxSd5iz9yIgF0zl3JJq4v1Wepn9//IRHiyZVyzflrdxZMnd\ngrwtSjBwL4G982kLSa6FdyVFoPzzDutmconEncyZEQKBgQDE28vVzO36Nw0J6OTn\nAfdZe8XvGFYZNFwKuqABWWT55IzlDJrrO8UXcniGt8fOfdRGn6jKRoUQQxKD/Gkr\nvOLNIcbE9+qt+0r6NbXGff3tvk4guQBz5RqUwhIR2yNp4cLRPmS0blBeczzVk1ne\nf8+IRH5a+8UAYCGXTINSy3MaMQKBgQDDTHeQvRenMHfZMHAJXKxH4LKuRqJS3XBY\n/LKWpu9HuPDEQSfGrbXaUveLEUdDIv6A1EKTo0iYtV8Y3XiDGjZeMcS5qzbo3NVK\nNHnfd/DPxNzMphTLDosa5PdLlX4hAJsL7/ODWlwWq957MO/40E8uBY8TKoYo7KlO\nimzk7k4vrQKBgQC+ZPqjIN31x7Kzp+1jw5IQmNZaJgZ3wB1ZPyCrzWMNEdB3Y5ad\n9qPrxonteegkvaxGVfrxD/14Ofa5crHhXIFa9tUBAeqXNNlSYAocHRUwEIQNwABB\nFw97WqwRWwnISVKb/6V0oNDYWMo4opgjyyfUWrJ+mszxTQiQBa9pr132sQKBgD+E\nqEKP7Zh34BLoeRfiZzn9b7/Uw0iWMssObPsokhxOnygFVO1+Y+39G/vEA9xnDkVS\nQ9EGwz6/ho1swpxJMzORlj0Y3YQBBvHafWTb+ptomLOKtKqSMVXu8CtKFLqhGsxY\nH2gyRE8vWO3SLcpL3eTG9BC0vOukhTBBP0d55j4FAoGBAIJe1KfOytrLrj11qMrB\nRhJ6EJuiVDzCVVOSAraYNOTrIXOQE5CmABPKFfjptDzzR9YD6mFFeholrufmDk08\nRfKAWShl4RtSCvu9qFj+oaZn6oFncpxcGUcutpWG427fm0pK31xULwI4ziQWKPfL\n4UvqkTYQlDkOSJAV7uV/3teY\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@newsmind-ai-fb56a.iam.gserviceaccount.com",
+  "client_id": "101101427497967785720",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40newsmind-ai-fb56a.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
