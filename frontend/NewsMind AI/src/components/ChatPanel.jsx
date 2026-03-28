@@ -1,74 +1,53 @@
-import { useState } from 'react';
-import api from '../api/client';
+import { useEffect, useState } from 'react';
+import { askNews } from '../services/api';
 
-export default function ChatPanel({ initialQuestion }) {
-  const [messages, setMessages] = useState(
-    initialQuestion
-      ? [{ role: 'user', content: initialQuestion }]
-      : []
-  );
-  const [input, setInput] = useState(initialQuestion || '');
+export default function ChatPanel({ userId, seedQuestion }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const send = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (!seedQuestion) return;
+    setInput(seedQuestion);
+  }, [seedQuestion]);
+
+  const sendMessage = async (event) => {
+    event.preventDefault();
     const question = input.trim();
     if (!question) return;
 
-    const newMessages = [...messages, { role: 'user', content: question }];
-    setMessages(newMessages);
+    setMessages((prev) => [...prev, { role: 'You', text: question }]);
     setInput('');
     setLoading(true);
 
     try {
-      const res = await api.post('/askNews', { question });
-      const answer = res.data.answer || 'No answer.';
-      setMessages([
-        ...newMessages,
-        { role: 'assistant', content: answer }
-      ]);
-    } catch (err) {
-      console.error(err);
-      setMessages([
-        ...newMessages,
-        {
-          role: 'assistant',
-          content: 'Sorry, something went wrong fetching the answer.'
-        }
-      ]);
+      const data = await askNews({ question, userId });
+      setMessages((prev) => [...prev, { role: 'AI', text: data.answer }]);
+    } catch (error) {
+      setMessages((prev) => [...prev, { role: 'AI', text: error.response?.data?.error || error.message }]);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="chat-panel">
-      <h3>Ask News</h3>
-      <div className="chat-window">
-        {messages.map((m, idx) => (
-          <div
-            key={idx}
-            className={
-              m.role === 'user' ? 'chat-bubble user' : 'chat-bubble ai'
-            }
-          >
-            {m.content}
-          </div>
+    <aside className="chat">
+      <h2>Ask News</h2>
+      <div className="chat-messages">
+        {messages.length === 0 && <p className="muted">Try asking: “What matters most in global markets this week?”</p>}
+        {messages.map((message, index) => (
+          <p key={`${message.role}-${index}`}>
+            <strong>{message.role}:</strong> {message.text}
+          </p>
         ))}
-        {loading && <div className="chat-bubble ai">Thinking…</div>}
+        {loading && <p>Thinking…</p>}
       </div>
-
-      <form onSubmit={send} className="chat-input-row">
-        <input
-          type="text"
-          placeholder="Ask about today's news…"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-        />
-        <button type="submit" disabled={loading}>
+      <form className="chat-input" onSubmit={sendMessage}>
+        <input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask about recent business news" />
+        <button id="send-btn" type="submit" disabled={loading}>
           Send
         </button>
       </form>
-    </div>
+    </aside>
   );
 }

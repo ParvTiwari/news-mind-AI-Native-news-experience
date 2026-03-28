@@ -1,90 +1,104 @@
-import { useEffect, useState } from 'react';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase';
-import { useAuth } from '../context/AuthContext';
-import api from '../api/client';
-import InterestSelector from '../components/InterestSelector';
-import NewsCard from '../components/NewsCard';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ChatPanel from '../components/ChatPanel';
+import LoadingSkeleton from '../components/LoadingSkeleton';
+import NewsCard from '../components/NewsCard';
+import { useDebounce } from '../hooks/useDebounce';
+import { getNews, getUserProfile } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardPage() {
-  const { user, initialLoading } = useAuth();
+  const { user, initialLoading, logout } = useAuth();
   const [articles, setArticles] = useState([]);
-  const [loadingNews, setLoadingNews] = useState(true);
-  const [error, setError] = useState('');
   const [interests, setInterests] = useState([]);
-  const [chatSeed, setChatSeed] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [seedQuestion, setSeedQuestion] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const debouncedSearch = useDebounce(searchText, 350);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user || initialLoading) return;
+    if (initialLoading || !user) return;
 
-    const load = async () => {
+    (async () => {
       try {
-        setLoadingNews(true);
-        setError('');
-        const res = await api.get('/getNews');
-        setArticles(res.data.articles || []);
+        setLoading(true);
+        const profile = await getUserProfile(user.uid);
+        const profileInterests = profile?.interests || [];
+        setInterests(profileInterests);
+        const data = await getNews({ userId: user.uid, interests: profileInterests, roleType: profile?.roleType || 'student' });
+        setArticles(data.articles || []);
       } catch (err) {
-        console.error(err);
-        setError('Failed to load news.');
+        setError(err.response?.data?.error || err.message);
       } finally {
-        setLoadingNews(false);
+        setLoading(false);
       }
-    };
+    })();
+  }, [initialLoading, user]);
 
-    load();
-  }, [user, initialLoading]);
+  const visibleArticles = useMemo(() => {
+    if (!debouncedSearch.trim()) return articles;
+    return articles.filter((article) => {
+      const text = `${article.title} ${article.summary} ${article.source}`.toLowerCase();
+      return text.includes(debouncedSearch.toLowerCase());
+    });
+  }, [articles, debouncedSearch]);
 
-  const handleAskArticle = (article) => {
-    const q = `Why does this matter: "${article.title}"?`;
-    setChatSeed(q);
-  };
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    window.location.href = '/';
-  };
-
-  if (initialLoading) {
-    return <div className="center">Loading...</div>;
-  }
-
+  if (initialLoading) return <main className="page">Loading...</main>;
   if (!user) {
-    return <div className="center">Please login to view your dashboard.</div>;
+    navigate('/login');
+    return null;
   }
 
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
+    <main className="page">
+      <header className="navbar">
         <div>
           <h1>NewsMind AI</h1>
-          <p>Hi {user.email}, here is your personalized business news.</p>
+          <p className="muted">{interests.length ? `Interests: ${interests.join(', ')}` : 'No interests selected yet.'}</p>
         </div>
-        <button onClick={handleLogout}>Logout</button>
+        <div className="navbar-actions">
+          <button type="button" className="ghost-btn" onClick={() => navigate('/interests')}>
+            Edit interests
+          </button>
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={async () => {
+              await logout();
+              navigate('/');
+            }}
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
-      <main className="dashboard-main">
-        <section className="dashboard-left">
-          <InterestSelector selected={interests} onChange={setInterests} />
-
-          {loadingNews && <p>Loading news…</p>}
-          {error && <p className="error-text">{error}</p>}
-
-          <div className="news-list">
-            {articles.map((article) => (
-              <NewsCard
-                key={article.id}
-                article={article}
-                onAsk={handleAskArticle}
-              />
-            ))}
+      <div className="container">
+        <section>
+          <input
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+            placeholder="Search in feed"
+            className="search"
+          />
+          {error ? <p className="error-text">{error}</p> : null}
+          <div className="news">
+            {loading
+              ? [...Array.from({ length: 6 })].map((_, idx) => <LoadingSkeleton key={idx} />)
+              : visibleArticles.map((article) => (
+                  <NewsCard
+                    key={article.id}
+                    article={article}
+                    onAsk={(selectedArticle) => setSeedQuestion(`Why does this matter for me: ${selectedArticle.title}?`)}
+                  />
+                ))}
           </div>
         </section>
 
-        <section className="dashboard-right">
-          <ChatPanel initialQuestion={chatSeed} />
-        </section>
-      </main>
-    </div>
+        <ChatPanel userId={user.uid} seedQuestion={seedQuestion} />
+      </div>
+    </main>
   );
 }

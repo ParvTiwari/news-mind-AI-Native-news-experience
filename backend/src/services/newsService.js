@@ -1,98 +1,64 @@
 const NewsAPI = require('newsapi');
+const env = require('../config/env');
+const { getCached, setCached } = require('../utils/cache');
+const { normalizeArticle } = require('../utils/normalize');
 
-const hasNewsApiKey = Boolean(process.env.NEWS_API_KEY);
-const hasGNewsKey = Boolean(process.env.GNEWS_API_KEY);
-const newsapi = hasNewsApiKey ? new NewsAPI(process.env.NEWS_API_KEY) : null;
-
-const mockArticles = [
-  {
-    id: 'mock-1',
-    title: 'Global chipmakers expand AI data-center capacity amid demand surge',
-    description: 'Semiconductor suppliers announced fresh capex plans targeting enterprise AI workloads.',
-    url: 'https://example.com/chips-ai-capacity',
-    source: 'Market Wire',
-    publishedAt: new Date().toISOString(),
-    imageUrl: '',
-    content: 'Chipmakers are accelerating expansion as cloud demand rises.'
-  },
-  {
-    id: 'mock-2',
-    title: 'Fintech startup raises Series B to scale SME lending platform',
-    description: 'The round highlights renewed venture interest in profitability-focused fintech models.',
-    url: 'https://example.com/fintech-series-b',
-    source: 'Startup Desk',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 42).toISOString(),
-    imageUrl: '',
-    content: 'Investors cited underwriting quality and default controls as strengths.'
-  },
-  {
-    id: 'mock-3',
-    title: 'Oil prices slip as supply outlook improves across major producers',
-    description: 'Energy markets reacted to revised supply projections and easing logistics bottlenecks.',
-    url: 'https://example.com/oil-supply-outlook',
-    source: 'Commodities Daily',
-    publishedAt: new Date(Date.now() - 1000 * 60 * 80).toISOString(),
-    imageUrl: '',
-    content: 'Analysts expect reduced volatility if inventories continue normalizing.'
-  }
-];
-
-function normalizeArticle(a, idx) {
-  return {
-    id: `${a.source?.id || a.source?.name || 'src'}-${idx}`,
-    title: a.title,
-    description: a.description,
-    url: a.url,
-    source: a.source?.name || a.source || 'Unknown source',
-    publishedAt: a.publishedAt,
-    imageUrl: a.urlToImage || a.image || '',
-    content: a.content
-  };
-}
+const newsapi = env.NEWS_API_KEY ? new NewsAPI(env.NEWS_API_KEY) : null;
 
 async function fetchFromNewsApi() {
-  const res = await newsapi.v2.topHeadlines({
+  const response = await newsapi.v2.topHeadlines({
     category: 'business',
     language: 'en',
     country: 'us',
-    pageSize: 30
+    pageSize: 40
   });
 
-  return (res.articles || []).map(normalizeArticle);
+  return (response.articles || []).map((article, idx) => normalizeArticle(article, idx));
 }
 
 async function fetchFromGNews() {
   const url = new URL('https://gnews.io/api/v4/top-headlines');
-  url.searchParams.set('token', process.env.GNEWS_API_KEY);
   url.searchParams.set('topic', 'business');
-  url.searchParams.set('lang', 'en');
   url.searchParams.set('country', 'us');
-  url.searchParams.set('max', '30');
+  url.searchParams.set('lang', 'en');
+  url.searchParams.set('max', '40');
+  url.searchParams.set('token', env.GNEWS_API_KEY);
 
   const response = await fetch(url.toString());
   if (!response.ok) {
     throw new Error(`GNews request failed (${response.status})`);
   }
 
-  const body = await response.json();
-  return (body.articles || []).map(normalizeArticle);
+  const data = await response.json();
+  return (data.articles || []).map((article, idx) => normalizeArticle(article, idx));
+}
+
+function dedupeArticles(articles = []) {
+  const seen = new Set();
+  return articles.filter((article) => {
+    const key = `${article.title}-${article.source}`.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 async function fetchBusinessNews() {
-  try {
-    if (hasNewsApiKey) {
-      return await fetchFromNewsApi();
-    }
+  const cached = getCached('business-news');
+  if (cached) return cached;
 
-    if (hasGNewsKey) {
-      return await fetchFromGNews();
-    }
-
-    return mockArticles;
-  } catch (error) {
-    console.error('Failed fetching live news, falling back to mock data.', error.message);
-    return mockArticles;
+  let articles = [];
+  if (newsapi) {
+    articles = await fetchFromNewsApi();
+  } else if (env.GNEWS_API_KEY) {
+    articles = await fetchFromGNews();
+  } else {
+    throw new Error('No news provider configured. Add NEWS_API_KEY or GNEWS_API_KEY.');
   }
+
+  const deduped = dedupeArticles(articles);
+  setCached('business-news', deduped, 300);
+  return deduped;
 }
 
 module.exports = { fetchBusinessNews };

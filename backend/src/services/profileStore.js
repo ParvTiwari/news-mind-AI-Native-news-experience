@@ -1,36 +1,66 @@
-const profiles = new Map();
+const { initFirebase } = require('../config/firebase');
+
+const memoryProfiles = new Map();
 
 function defaultProfile(userId = 'guest') {
   return {
-    userId,
-    persona: 'student',
+    id: userId,
+    name: 'Guest User',
+    email: '',
     interests: ['markets', 'ai'],
     roleType: 'student',
     updatedAt: new Date().toISOString()
   };
 }
 
-function upsertProfile(input = {}) {
-  const userId = (input.userId || 'guest').trim();
-  const current = profiles.get(userId) || defaultProfile(userId);
+async function getUserProfile(userId = 'guest') {
+  const normalizedUserId = String(userId || 'guest');
+  const { db, enabled } = initFirebase();
 
-  const next = {
+  if (!enabled) {
+    return memoryProfiles.get(normalizedUserId) || defaultProfile(normalizedUserId);
+  }
+
+  const doc = await db.collection('users').doc(normalizedUserId).get();
+  if (!doc.exists) {
+    return defaultProfile(normalizedUserId);
+  }
+
+  return doc.data();
+}
+
+async function saveUserInterests(userId, interests = []) {
+  const normalizedUserId = String(userId || 'guest');
+  const { db, enabled } = initFirebase();
+
+  if (!enabled) {
+    const current = memoryProfiles.get(normalizedUserId) || defaultProfile(normalizedUserId);
+    const updated = {
+      ...current,
+      id: normalizedUserId,
+      interests,
+      updatedAt: new Date().toISOString()
+    };
+    memoryProfiles.set(normalizedUserId, updated);
+    return updated;
+  }
+
+  const ref = db.collection('users').doc(normalizedUserId);
+  const snapshot = await ref.get();
+  const current = snapshot.exists ? snapshot.data() : defaultProfile(normalizedUserId);
+
+  const updated = {
     ...current,
-    ...input,
-    userId,
-    interests: Array.isArray(input.interests) ? input.interests : current.interests,
+    id: normalizedUserId,
+    interests,
     updatedAt: new Date().toISOString()
   };
 
-  profiles.set(userId, next);
-  return next;
-}
-
-function getProfile(userId = 'guest') {
-  return profiles.get(userId) || defaultProfile(userId);
+  await ref.set(updated, { merge: true });
+  return updated;
 }
 
 module.exports = {
-  upsertProfile,
-  getProfile
+  getUserProfile,
+  saveUserInterests
 };

@@ -1,30 +1,27 @@
-import express from "express";
-import cors from "cors";
-import {
-  processNews,
-  askNews
-} from "./llm.js";
+const express = require('express');
+const { generateSummary, generateExplanation, generateWhyItMatters, answerNewsQuestion } = require('./ai.service');
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
-// 🧠 Analyze News
-app.post("/analyze", async (req, res) => {
-  const { article } = req.body;
+app.post('/analyze', async (req, res) => {
+  const article = req.body.article || {};
+  const userProfile = req.body.userProfile || { roleType: 'student' };
+  const [summary, explanation, whyItMatters] = await Promise.all([
+    generateSummary(article),
+    generateExplanation(article),
+    generateWhyItMatters(article, userProfile)
+  ]);
 
-  const result = await processNews(article);
-  res.json(result);
+  res.json({ summary, explanation, whyItMatters });
 });
 
-// 💬 Ask News
-app.post("/ask", async (req, res) => {
-  const { question, article } = req.body;
-
-  const answer = await askNews(question, article);
+app.post('/ask', async (req, res) => {
+  const { question, articles, userProfile } = req.body;
+  const answer = await answerNewsQuestion(question, articles, userProfile);
   res.json({ answer });
 });
 
-app.listen(3000, () => {
-  console.log("🚀 Server running on http://localhost:3000");
+app.listen(3200, () => {
+  console.log('LLM service listening on 3200');
 });

@@ -1,21 +1,22 @@
 import { Link } from 'react-router-dom';
 
 export default function LandingPage() {
-  console.log('Rendering LandingPage');
   return (
-    <div className="landing">
-      <header className="landing-header">
-        <h1>NewsMind AI</h1>
-        <p>AI-native, personalized business news you can’t get elsewhere.</p>
-        <div className="landing-actions">
-          <Link to="/signup">
-            <button>Get Started</button>
-          </Link>
-          <Link to="/login">
-            <button className="secondary">Login</button>
-          </Link>
-        </div>
-      </header>
-    </div>
+    <main className="page" id="landing-page">
+      <p className="eyebrow">AI-native newsroom</p>
+      <h1>NewsMind AI</h1>
+      <p className="subtext">
+        Personalized business news with AI summaries, context, and chat Q&A. NewsMind reads the market so you can
+        focus on decisions.
+      </p>
+      <div className="card-actions">
+        <Link className="link-btn" to="/login">
+          Login
+        </Link>
+        <Link className="link-btn" to="/signup">
+          Create account
+        </Link>
+      </div>
+    </main>
   );
 }

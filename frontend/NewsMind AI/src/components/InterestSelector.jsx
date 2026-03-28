@@ -1,42 +1,21 @@
-const ALL_INTERESTS = [
-  'startups',
-  'markets',
-  'technology',
-  'policy',
-  'india',
-  'global',
-  'funding',
-  'fintech'
-];
+const INTERESTS = ['markets', 'startups', 'ai', 'policy', 'global', 'earnings', 'fintech'];
 
-export default function InterestSelector({ selected, onChange }) {
-  const toggle = (interest) => {
-    if (selected.includes(interest)) {
-      onChange(selected.filter((i) => i !== interest));
-    } else {
-      onChange([...selected, interest]);
-    }
-  };
-
+export default function InterestSelector({ selected, onToggle }) {
   return (
-    <div className="interest-selector">
-      <h3>Your interests</h3>
-      <div className="interest-chips">
-        {ALL_INTERESTS.map((interest) => (
+    <section>
+      <h2>Select your interests</h2>
+      <div className="interests">
+        {INTERESTS.map((interest) => (
           <button
             key={interest}
             type="button"
-            className={
-              selected.includes(interest)
-                ? 'chip chip-active'
-                : 'chip'
-            }
-            onClick={() => toggle(interest)}
+            className={`interest-btn ${selected.includes(interest) ? 'active' : ''}`}
+            onClick={() => onToggle(interest)}
           >
             {interest}
           </button>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
